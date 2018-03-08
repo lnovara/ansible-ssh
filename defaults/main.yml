@@ -1,0 +1,21 @@
+---
+
+ssh_client_packages:
+  - openssh-client
+
+ssh_server_packages:
+  - openssh-server
+
+ssh_client_config: {}
+
+ssh_server_config: {}
+
+ssh_rebuild_moduli: yes
+
+ssh_moduli_bits: 4096
+
+ssh_rebuild_host_keys: yes
+
+ssh_host_keys_bits:
+  ed25519: 512  # Ed25519 keys have fixed length, number of bits is ignored
+  rsa: 4096

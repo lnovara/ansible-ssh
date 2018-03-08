@@ -1,0 +1,29 @@
+---
+
+# FIXME: this duplicates parts of defaults/main.yml but it is the only way I
+# found to have all the user-facing variables in one place to write tests
+# against.
+
+ssh_client_packages:
+  - openssh-client
+
+ssh_server_packages:
+  - openssh-server
+
+ssh_client_config:
+  PasswordAuthentication: "no"
+  StrictHostKeyChecking: "no"
+
+ssh_server_config:
+  AddressFamily: "any"
+  PermitRootLogin: "no"
+
+ssh_rebuild_moduli: yes
+
+ssh_moduli_bits: 512
+
+ssh_rebuild_host_keys: yes
+
+ssh_host_keys_bits:
+  ed25519: 512  # Ed25519 keys have fixed length, number of bits is ignored
+  rsa: 1024

@@ -1,0 +1,23 @@
+---
+
+galaxy_info:
+  author: Luca Novara
+  description: Install and configure SSH server and client.
+  company:
+  license: MIT
+  min_ansible_version: 2.2
+  issue_tracker_url: https://github.com/lnovara/ansible-ssh/issues
+
+  platforms:
+    - name: Debian
+      versions:
+        - stretch
+
+  galaxy_tags:
+    - ssh
+    - debian
+    - system
+
+dependencies:
+  - src: https://github.com/jtyr/ansible-config_encoder_filters
+    name: config_encoder_filters

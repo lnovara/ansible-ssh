@@ -1,0 +1,19 @@
+---
+
+_ssh_client_config_default:
+  "Host *":
+    GSSAPIAuthentication: "yes"
+    HashKnownHosts: "yes"
+    SendEnv:
+      - LANG
+      - LC_*
+
+_ssh_server_config_default:
+  AcceptEnv:
+    - LANG
+    - LC_*
+  ChallengeResponseAuthentication: "no"
+  PrintMotd: "no"
+  Subsystem: "sftp /usr/lib/openssh/sftp-server"
+  UsePAM: "yes"
+  X11Forwarding: "yes"

@@ -1,0 +1,10 @@
+---
+- name: Converge
+  hosts: all
+
+  roles:
+    - config_encoder_filters
+    - ansible-ssh
+
+  vars_files:
+    - playbook-vars.yml

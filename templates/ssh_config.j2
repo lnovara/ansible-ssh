@@ -1,0 +1,21 @@
+{{ ansible_managed | comment }}
+
+{% for key, value in ssh_client_config | dictsort %}
+{% if not key | regex_search('^Host') and not key | regex_search('^Match') %}
+{{ { key: value } | encode_ini(delimiter = ' ') }}
+{% endif %}
+{%- endfor -%}
+
+{% for key, value in ssh_client_config | dictsort %}
+{% if key | regex_search('^Host') %}
+{{ key }}
+{{ value | encode_ini(delimiter = ' ') | trim | comment(decoration = '\t') }}
+{% endif %}
+{%- endfor -%}
+
+{% for key, value in ssh_client_config | dictsort %}
+{% if key | regex_search('^Match') %}
+{{ key }}
+{{ value | encode_ini(delimiter = ' ') | trim | comment(decoration = '\t') }}
+{% endif %}
+{%- endfor -%}
