@@ -14,7 +14,9 @@ platforms:
   - name: debian-stretch
     image: debian:stretch
     dockerfile_tpl: debian-systemd
-    privileged: yes
+    capabilities:
+      - SYS_ADMIN
+    command: /lib/systemd/systemd
     volumes:
       - /run/sshd
       - /sys/fs/cgroup:/sys/fs/cgroup:ro

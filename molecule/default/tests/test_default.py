@@ -92,6 +92,5 @@ def test_ssh_server_config(host, opt, value):
 
 
 def test_ssh_service(host):
-    s = host.ansible('service', 'name=ssh state=started enabled=yes')
-
-    assert not s['changed']
+    assert host.service('ssh').is_enabled
+    assert host.service('ssh').is_running
