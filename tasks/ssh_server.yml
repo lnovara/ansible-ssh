@@ -94,13 +94,13 @@
 
     - name: Build HostKeyAlgorithms configuration option
       set_fact:
-        ssh_host_key_algorithms_config: "{{ item.key }}"
+        ssh_host_key_algorithms_config: "ssh-{{ item.key }}"
       register: ssh_host_key_algorithms_config_result
       with_dict: "{{ ssh_host_keys_bits }}"
 
     - name: Build HostKeyAlgorithms list
       set_fact:
-        ssh_host_key_algorithms_config: "{{ ssh_host_key_algorithms_config_result.results | map(attribute = 'ansible_facts.ssh_host_key_algorithms_config') | list | join (',') }}"
+        ssh_host_key_algorithms_config: "{{ ssh_host_key_algorithms_config_result.results | map(attribute = 'ansible_facts.ssh_host_key_algorithms_config') | list | join(',') }}"
 
     - name: Add HostKeyAlgorithms to SSH server config
       set_fact:
