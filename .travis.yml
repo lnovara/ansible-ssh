@@ -1,7 +1,7 @@
 ---
 
 language: python
-python: "2.7"
+python: 2.7
 
 sudo: required
 
@@ -9,12 +9,12 @@ sudo: required
 services:
   - docker
 
-# Replace aufs with the vfs docker storage driver
-# to prevent systemd to fail starting docker in docker.
-before_install:
-  - sudo sed -i 's|DOCKER_OPTS=.*|DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock --storage-driver vfs"|g' /etc/default/docker
-  - sudo service docker restart
-  - docker info
+# Parallel testing of supported Ansible versions
+env:
+  matrix:
+    - ANSIBLE=2.2
+    - ANSIBLE=2.3
+    - ANSIBLE=2.4
 
 # Install tox
 install:
