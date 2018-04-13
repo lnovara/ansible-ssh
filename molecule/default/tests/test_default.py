@@ -38,10 +38,10 @@ def test_ssh_moduli(host):
     assert not host.file('/etc/ssh/moduli.safe').exists
 
 
-@pytest.mark.parametrize('ssh_key',
+@pytest.mark.parametrize('ssh_host_key',
                          ansible_defaults()['ssh_host_keys_bits'].keys())
-def test_ssh_keys(host, ssh_key):
-    priv = host.file('/etc/ssh/ssh_host_%s_key' % ssh_key)
+def test_ssh_host_keys(host, ssh_host_key):
+    priv = host.file('/etc/ssh/ssh_host_%s_key' % ssh_host_key)
 
     assert priv.exists
     assert priv.is_file
@@ -49,7 +49,7 @@ def test_ssh_keys(host, ssh_key):
     assert priv.group == 'root'
     assert priv.mode == 0o600
 
-    pub = host.file('/etc/ssh/ssh_host_%s_key.pub' % ssh_key)
+    pub = host.file('/etc/ssh/ssh_host_%s_key.pub' % ssh_host_key)
 
     assert pub.exists
     assert pub.is_file
@@ -59,8 +59,16 @@ def test_ssh_keys(host, ssh_key):
 
     conf = host.file('/etc/ssh/sshd_config')
 
-    assert conf.contains('HostKeyAlgorithms %s' % ssh_key)
-    assert conf.contains('HostKey /etc/ssh/ssh_host_%s_key' % ssh_key)
+    assert conf.contains('HostKey /etc/ssh/ssh_host_%s_key' % ssh_host_key)
+
+
+def test_ssh_host_key_algorithms(host, ansible_defaults):
+    conf = host.file('/etc/ssh/sshd_config')
+
+    host_key_algorithms = ansible_defaults['ssh_host_keys_bits'].keys()
+
+    assert conf.contains('HostKeyAlgorithms %s' %
+                         ','.join(host_key_algorithms))
 
 
 @pytest.mark.parametrize('opt,value',
