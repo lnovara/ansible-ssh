@@ -67,8 +67,8 @@ def test_ssh_host_key_algorithms(host, ansible_defaults):
 
     host_key_algorithms = ansible_defaults['ssh_host_keys_bits'].keys()
 
-    assert conf.contains('HostKeyAlgorithms ssh-%s' %
-                         ','.join(host_key_algorithms))
+    assert conf.contains('HostKeyAlgorithms %s' %
+                         ','.join("ssh-" + s for s in host_key_algorithms))
 
 
 @pytest.mark.parametrize('opt,value',
