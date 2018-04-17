@@ -11,6 +11,20 @@
     ssh_server_config: "{{ _ssh_server_config_default | combine(ssh_server_config, recursive = True) }}"
   notify: SSH server configuration
 
+- name: "Create Ansible local facts directory"
+  file:
+    path: /etc/ansible/facts.d
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+
+- name: "Create ssh_local_facts dict"
+  set_fact:
+    ssh_local_facts:
+      ssh_host_keys_rebuilt: "{{ ssh_host_key_rebuilt | default('no') }}"
+      ssh_moduli_rebuilt: "{{ ssh_moduli_rebuilt | default('no') }}"
+
 - block:
 
     - name: Rebuild DH group exchange candidate primes
@@ -18,14 +32,12 @@
         /usr/bin/ssh-keygen -G "/etc/ssh/moduli.{{ ssh_moduli_bits}}.all" -b "{{ ssh_moduli_bits }}"
       args:
         creates: "/etc/ssh/moduli.{{ ssh_moduli_bits }}.all"
-      changed_when: no
 
     - name: Test DH group exchange candidate primes for safety
       command:
         /usr/bin/ssh-keygen -T "/etc/ssh/moduli.{{ ssh_moduli_bits}}.safe" -f "/etc/ssh/moduli.{{ ssh_moduli_bits }}.all"
       args:
         creates: "/etc/ssh/moduli.{{ ssh_moduli_bits}}.safe"
-      changed_when: no
 
     - name: Install new DH group exchange candidate primes
       copy:
@@ -36,8 +48,11 @@
         owner: root
         group: root
         mode: 0644
-      changed_when: no
       notify: Restart SSH
+
+    - name: Set ssh_moduli_rebuilt fact
+      set_fact:
+        ssh_local_facts: "{{ ssh_local_facts | combine({ssh_moduli_rebuilt: 'yes'}, recursive = True) }}"
 
   always:
 
@@ -45,25 +60,22 @@
       file:
         path: "{{ item }}"
         state: absent
-      changed_when: no
       with_items:
         - "/etc/ssh/moduli.{{ ssh_moduli_bits }}.all"
         - "/etc/ssh/moduli.{{ ssh_moduli_bits }}.safe"
 
-  when: ssh_rebuild_moduli
+  when: ssh_rebuild_moduli and not ssh_local_facts["ssh_moduli_rebuilt"]
 
 - block:
 
     - name: Get key files in /etc/ssh
       shell: ls /etc/ssh/ssh_host_*key*
       register: ssh_host_key_files
-      changed_when: no
 
     - name: Remove old host keys
       file:
         path: "{{ item }}"
         state: absent
-      changed_when: no
       with_items: "{{ ssh_host_key_files.stdout_lines }}"
 
     - name: Rebuild host key
@@ -71,46 +83,55 @@
         "/usr/bin/ssh-keygen -t {{ item.key }} -b {{ item.value }} -f /etc/ssh/ssh_host_{{ item.key }}_key -N ''"
       args:
         creates: "/etc/ssh/ssh_host_{{ item.key }}_key*"
-      changed_when: no
       with_dict: "{{ ssh_host_keys_bits }}"
 
-    - name: Build HostKey configuration option
+    - name: Set ssh_host_key_rebuilt fact
       set_fact:
-        ssh_host_key_config: "/etc/ssh/ssh_host_{{ item.key }}_key"
-      register: ssh_host_key_config_result
-      with_dict: "{{ ssh_host_keys_bits }}"
+        ssh_local_facts: "{{ ssh_local_facts | combine({ssh_host_key_rebuilt: 'yes'}, recursive = True) }}"
 
-    - name: Build HostKey list
-      set_fact:
-        ssh_host_key_config: "{{ ssh_host_key_config_result.results | map(attribute = 'ansible_facts.ssh_host_key_config') | list }}"
+  when: ssh_rebuild_host_keys and not ssh_local_facts["ssh_host_keys_rebuilt"]
 
-    - name: Add HostKey to SSH server config
-      set_fact:
-        ssh_server_config: "{{ ssh_server_config | combine({ 'HostKey': ssh_host_key_config }) }}"
-      changed_when: no
-      notify:
-        - SSH server configuration
-        - Restart SSH
+- name: Build HostKey configuration option
+  set_fact:
+    ssh_host_key_config: "/etc/ssh/ssh_host_{{ item.key }}_key"
+  register: ssh_host_key_config_result
+  with_dict: "{{ ssh_host_keys_bits }}"
 
-    - name: Build HostKeyAlgorithms configuration option
-      set_fact:
-        ssh_host_key_algorithms_config: "ssh-{{ item.key }}"
-      register: ssh_host_key_algorithms_config_result
-      with_dict: "{{ ssh_host_keys_bits }}"
+- name: Build HostKey list
+  set_fact:
+    ssh_host_key_config: "{{ ssh_host_key_config_result.results | map(attribute = 'ansible_facts.ssh_host_key_config') | list }}"
 
-    - name: Build HostKeyAlgorithms list
-      set_fact:
-        ssh_host_key_algorithms_config: "{{ ssh_host_key_algorithms_config_result.results | map(attribute = 'ansible_facts.ssh_host_key_algorithms_config') | list | join(',') }}"
+- name: Add HostKey to SSH server config
+  set_fact:
+    ssh_server_config: "{{ ssh_server_config | combine({ 'HostKey': ssh_host_key_config }) }}"
+  notify:
+    - SSH server configuration
+    - Restart SSH
 
-    - name: Add HostKeyAlgorithms to SSH server config
-      set_fact:
-        ssh_server_config: "{{ ssh_server_config | combine({ 'HostKeyAlgorithms': ssh_host_key_algorithms_config }) }}"
-      changed_when: no
-      notify:
-        - SSH server configuration
-        - Restart SSH
+- name: Build HostKeyAlgorithms configuration option
+  set_fact:
+    ssh_host_key_algorithms_config: "ssh-{{ item.key }}"
+  register: ssh_host_key_algorithms_config_result
+  with_dict: "{{ ssh_host_keys_bits }}"
 
-  when: ssh_rebuild_host_keys
+- name: Build HostKeyAlgorithms list
+  set_fact:
+    ssh_host_key_algorithms_config: "{{ ssh_host_key_algorithms_config_result.results | map(attribute = 'ansible_facts.ssh_host_key_algorithms_config') | list | join(',') }}"
+
+- name: Add HostKeyAlgorithms to SSH server config
+  set_fact:
+    ssh_server_config: "{{ ssh_server_config | combine({ 'HostKeyAlgorithms': ssh_host_key_algorithms_config }) }}"
+  notify:
+    - SSH server configuration
+    - Restart SSH
+
+- name: Make ssh_local_facts permament
+  copy:
+    content: "{{ ssh_local_facts | to_nice_json }}"
+    dest: /etc/ansible/facts.d/ssh
+    owner: root
+    group: root
+    mode: 0644
 
 - name: SSH server configuration
   template:
