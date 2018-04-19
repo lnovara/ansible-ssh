@@ -71,6 +71,29 @@ def test_ssh_host_key_algorithms(host, ansible_defaults):
                          ','.join("ssh-" + s for s in host_key_algorithms))
 
 
+def test_ssh_local_facts(host, ansible_defaults):
+    local_facts_file = host.file('/etc/ansible/facts.d/ssh.fact')
+
+    assert local_facts_file.exists
+    assert local_facts_file.is_file
+    assert local_facts_file.user == 'root'
+    assert local_facts_file.group == 'root'
+    assert local_facts_file.mode == 0o644
+
+    local_facts_ssh = \
+        host.ansible("setup")["ansible_facts"]["ansible_local"]["ssh"]
+
+    if ansible_defaults['ssh_rebuild_moduli']:
+        assert local_facts_ssh['ssh_moduli_rebuilt']
+    else:
+        assert not local_facts_ssh['ssh_moduli_rebuilt']
+
+    if ansible_defaults['ssh_rebuild_host_keys']:
+        assert local_facts_ssh['ssh_host_keys_rebuilt']
+    else:
+        assert not local_facts_ssh['ssh_host_keys_rebuilt']
+
+
 @pytest.mark.parametrize('opt,value',
                          ansible_defaults()['ssh_client_config'].items())
 def test_ssh_client_config(host, opt, value):

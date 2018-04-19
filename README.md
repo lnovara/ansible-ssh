@@ -46,7 +46,9 @@ one defined in `vars/main.yml`.
     ssh_rebuild_moduli: yes
 
 Rebulild `/etc/ssh/moduli` file that contain primes for Diffie-Hellman Group
-Exchange (DH-GEX).
+Exchange (DH-GEX).  
+**NOTE**: the role records a ``ssh.ssh_moduli_rebuilt`` local fact  in order not
+to rebuild ``/etc/ssh/moduli`` at every run.
 
     ssh_moduli_bits: 4096
 
@@ -54,7 +56,9 @@ Number of bits for DH-GEX primes.
 
     ssh_rebuild_host_keys: yes
 
-Rebuild SSH host keys.
+Rebuild SSH host keys.  
+**NOTE**: the role records a ``ssh.ssh_host_keys_rebuilt`` local fact in order
+not to rebuild SSH host keys at every run.
 
     ssh_host_keys_bits:
       ed25519: 512  # Ed25519 keys have fixed length, number of bits is ignored

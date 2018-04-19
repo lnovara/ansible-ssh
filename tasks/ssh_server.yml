@@ -11,7 +11,7 @@
     ssh_server_config: "{{ _ssh_server_config_default | combine(ssh_server_config, recursive = True) }}"
   notify: SSH server configuration
 
-- name: "Create Ansible local facts directory"
+- name: Create Ansible local facts directory
   file:
     path: /etc/ansible/facts.d
     owner: root
@@ -19,11 +19,11 @@
     mode: 0755
     state: directory
 
-- name: "Create ssh_local_facts dict"
+- name: Create ssh_local_facts dictionary
   set_fact:
     ssh_local_facts:
-      ssh_host_keys_rebuilt: "{{ ssh_host_key_rebuilt | default('no') }}"
-      ssh_moduli_rebuilt: "{{ ssh_moduli_rebuilt | default('no') }}"
+      ssh_host_keys_rebuilt: "{{ hostvars[inventory_hostname] | json_query('ansible_local.ssh.ssh_host_keys_rebuilt') | default('no', 'yes') | bool }}"
+      ssh_moduli_rebuilt: "{{ hostvars[inventory_hostname] | json_query('ansible_local.ssh.ssh_moduli_rebuilt') | default('no', 'yes') | bool }}"
 
 - block:
 
@@ -52,7 +52,7 @@
 
     - name: Set ssh_moduli_rebuilt fact
       set_fact:
-        ssh_local_facts: "{{ ssh_local_facts | combine({ssh_moduli_rebuilt: 'yes'}, recursive = True) }}"
+        ssh_moduli_rebuilt: yes
 
   always:
 
@@ -64,7 +64,7 @@
         - "/etc/ssh/moduli.{{ ssh_moduli_bits }}.all"
         - "/etc/ssh/moduli.{{ ssh_moduli_bits }}.safe"
 
-  when: ssh_rebuild_moduli and not ssh_local_facts["ssh_moduli_rebuilt"]
+  when: ssh_rebuild_moduli and not ssh_local_facts.ssh_moduli_rebuilt
 
 - block:
 
@@ -85,11 +85,11 @@
         creates: "/etc/ssh/ssh_host_{{ item.key }}_key*"
       with_dict: "{{ ssh_host_keys_bits }}"
 
-    - name: Set ssh_host_key_rebuilt fact
+    - name: Set ssh_host_keys_rebuilt fact
       set_fact:
-        ssh_local_facts: "{{ ssh_local_facts | combine({ssh_host_key_rebuilt: 'yes'}, recursive = True) }}"
+        ssh_host_keys_rebuilt: yes
 
-  when: ssh_rebuild_host_keys and not ssh_local_facts["ssh_host_keys_rebuilt"]
+  when: ssh_rebuild_host_keys and not ssh_local_facts.ssh_host_keys_rebuilt
 
 - name: Build HostKey configuration option
   set_fact:
@@ -124,11 +124,22 @@
   notify:
     - SSH server configuration
     - Restart SSH
+  with_dict: "{{ ssh_host_keys_bits }}"
 
-- name: Make ssh_local_facts permament
-  copy:
-    content: "{{ ssh_local_facts | to_nice_json }}"
-    dest: /etc/ansible/facts.d/ssh
+- name: Update ssh_local_facts
+  set_fact:
+    ssh_local_facts_update:
+      ssh_host_keys_rebuilt: "{{ ssh_host_keys_rebuilt | default(true) }}"
+      ssh_moduli_rebuilt: "{{ ssh_moduli_rebuilt | default(true) }}"
+
+- name: Merge ssh_local_facts with updated version
+  set_fact:
+    ssh_local_facts: "{{ ssh_local_facts | combine(ssh_local_facts_update, recursive = True) }}"
+
+- name: Persist ssh_local_facts
+  template:
+    src: ssh.fact.j2
+    dest: /etc/ansible/facts.d/ssh.fact
     owner: root
     group: root
     mode: 0644
