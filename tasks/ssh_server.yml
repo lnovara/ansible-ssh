@@ -50,10 +50,6 @@
         mode: 0644
       notify: Restart SSH
 
-    - name: Set ssh_moduli_rebuilt fact
-      set_fact:
-        ssh_moduli_rebuilt: yes
-
   always:
 
     - name: Remove DH group exchange candidate primes intermediate files
@@ -84,10 +80,6 @@
       args:
         creates: "/etc/ssh/ssh_host_{{ item.key }}_key*"
       with_dict: "{{ ssh_host_keys_bits }}"
-
-    - name: Set ssh_host_keys_rebuilt fact
-      set_fact:
-        ssh_host_keys_rebuilt: yes
 
   when: ssh_rebuild_host_keys and not ssh_local_facts.ssh_host_keys_rebuilt
 
@@ -129,8 +121,8 @@
 - name: Update ssh_local_facts
   set_fact:
     ssh_local_facts_update:
-      ssh_host_keys_rebuilt: "{{ ssh_host_keys_rebuilt | default(true) }}"
-      ssh_moduli_rebuilt: "{{ ssh_moduli_rebuilt | default(true) }}"
+      ssh_host_keys_rebuilt: "{{ ssh_rebuild_host_keys }}"
+      ssh_moduli_rebuilt: "{{ ssh_rebuild_moduli }}"
 
 - name: Merge ssh_local_facts with updated version
   set_fact:
